@@ -37,9 +37,9 @@ local function ShallowCopy(Table)
 end
 local function SetDifference(A, B)
     local Difference = ShallowCopy(A)
-    for _, Value in A do
+    for Index, Value in A do
         if table.find(B, Value) then
-            table.remove(A, table.find(A, Value))
+            table.remove(A, Index)
         end
     end
     return Difference
@@ -66,7 +66,7 @@ function Chunk.LoadChunk()
                 if #Locations == MAX_GRID_CACHE_SIZE then
                     local Removed = table.remove(Locations, 1)
                     GridCache[Removed[IndexX]][Removed[IndexZ]]:Destroy()
-                    GridCache[Removed[IndexX]][Removed[IndexZ]] = nil
+                    GridCache[Removed[IndexX]][Removed[IndexZ]] = nil  
                 end
                 NewLocation = {
                     [IndexX] = X,
@@ -85,13 +85,13 @@ function Chunk.LoadChunk()
         end
     end
     if next(JustLoaded) then
-        Chunk.Unload(SetDifference(UpdatedJustLoaded, JustLoaded)) 
+        Chunk.Unload(SetDifference(JustLoaded, UpdatedJustLoaded)) 
     end
     JustLoaded = UpdatedJustLoaded
 end
 function Chunk.Unload(Difference)
     for _, Object in Difference do
-        GridCache[Object[IndexX]][Object[IndexZ]].Parent = nil
+        -- GridCache[Object[IndexX]][Object[IndexZ]].Parent = nil
         continue
     end
 end
