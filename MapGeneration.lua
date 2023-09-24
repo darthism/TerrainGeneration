@@ -8,7 +8,6 @@ local CHUNK_SIZE = 50
 local CELL_SIZE = 5
 local MAX_GRID_CACHE_SIZE = 600
 local HalfChunkSize = CHUNK_SIZE / 2
-
 local Seed = math.random() * 10000
 local NoiseSettings = {
 	Frequency = 0.1,
