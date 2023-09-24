@@ -5,9 +5,15 @@ local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local Humanoid = Character:WaitForChild("Humanoid")
 
 local CHUNK_SIZE = 50
-local CELL_SIZE = 2
-local MAX_GRID_CACHE_SIZE = 3000
+local CELL_SIZE = 5
+local MAX_GRID_CACHE_SIZE = 600
 local HalfChunkSize = CHUNK_SIZE / 2
+
+local Seed = math.random() * 10000
+local NoiseSettings = {
+	Frequency = 0.1,
+	Amplitude = 20,
+}
 
 local IndexX = 1
 local IndexZ = 2
@@ -35,65 +41,39 @@ local function ShallowCopy(Table)
     end
     return Copy
 end
-local function SetDifference(A, B)
-    local Difference = ShallowCopy(A)
-    for Index, Value in A do
-        if table.find(B, Value) then
-            table.remove(A, Index)
-        end
-    end
-    return Difference
-end
 local CurrentCell
-local Locations = {}
-local JustLoaded = {}
 local GridCache = {}
 local Chunk = {}
 function Chunk.LoadChunk()
-    local CellX = CurrentCell[IndexX]
-    local CellZ = CurrentCell[IndexZ]
-    local UpdatedJustLoaded = {}
-    for X = CellX - HalfChunkSize, CellX + HalfChunkSize do
-        for Z = CellZ - HalfChunkSize, CellZ + HalfChunkSize do
-            if not GridCache[X] then
-                GridCache[X] = {}
-            end
-            local Neighbor = GridCache[X][Z]
-            local NewLocation
-            if Neighbor then
-                Neighbor.Parent = workspace
-            else
-                if #Locations == MAX_GRID_CACHE_SIZE then
-                    local Removed = table.remove(Locations, 1)
-                    GridCache[Removed[IndexX]][Removed[IndexZ]]:Destroy()
-                    GridCache[Removed[IndexX]][Removed[IndexZ]] = nil  
-                end
-                NewLocation = {
-                    [IndexX] = X,
-                    [IndexZ] = Z,
-                }
-                table.insert(Locations, NewLocation)
-                local Part = BoilerplatePart:Clone()
-                Part.Position = Vector3.new(X * CELL_SIZE, 0, Z * CELL_SIZE)
-                Part.Parent = workspace
-                GridCache[X][Z] = Part
-            end
-            table.insert(UpdatedJustLoaded, NewLocation or {
-                [IndexX] = X,
-                [IndexZ] = Z,
-            })
-        end
-    end
-    if next(JustLoaded) then
-        Chunk.Unload(SetDifference(JustLoaded, UpdatedJustLoaded)) 
-    end
-    JustLoaded = UpdatedJustLoaded
-end
-function Chunk.Unload(Difference)
-    for _, Object in Difference do
-        -- GridCache[Object[IndexX]][Object[IndexZ]].Parent = nil
-        continue
-    end
+	local CellX = CurrentCell[IndexX]
+	local CellZ = CurrentCell[IndexZ]
+	local UpdatedJustLoaded = {}
+	for X = CellX - HalfChunkSize - 1, CellX + HalfChunkSize + 1 do
+		for Z = CellZ - HalfChunkSize - 1, CellZ + HalfChunkSize + 1 do
+			if not GridCache[X] then
+				GridCache[X] = {}
+			end
+			local ExteriorRange = X == CellX - HalfChunkSize - 1 or X == CellX + HalfChunkSize + 1 or Z == CellZ - HalfChunkSize - 1 or Z == CellZ + HalfChunkSize + 1
+			if ExteriorRange then
+				if GridCache[X] and GridCache[X][Z] then
+					GridCache[X][Z].Parent = nil
+					continue
+				end
+			else
+				local Neighbor = GridCache[X][Z]        
+				local NewLocation
+				if Neighbor then
+					Neighbor.Parent = workspace
+				else
+					local Noise = math.noise(X * NoiseSettings.Frequency, Z * NoiseSettings.Frequency, Seed) * NoiseSettings.Amplitude
+					local Part = BoilerplatePart:Clone()
+					Part.Position = Vector3.new(X * CELL_SIZE, Noise, Z * CELL_SIZE)
+					Part.Parent = workspace
+					GridCache[X][Z] = Part
+				end
+			end
+		end
+	end
 end
 function Chunk.GetNewCellOfPlayer()
     return {
